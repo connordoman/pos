@@ -77,6 +77,8 @@ func InitPrinter() (*Printer, error) {
 	p.ctx = ctx
 	p.device = dev
 
+	dev.SetAutoDetach(true)
+
 	cfg, err := p.device.Config(1)
 	if err != nil {
 		p.Close()
