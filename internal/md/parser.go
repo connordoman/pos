@@ -1,6 +1,9 @@
 package md
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+)
 
 const (
 	escape       = 0x1B
@@ -19,6 +22,8 @@ func Parse(text string) ([]byte, error) {
 
 		nextIndex := min(i+1, len(text)-1)
 		nextNextIndex := min(i+2, len(text)-1)
+
+		fmt.Printf("%c", c)
 
 		switch c {
 		case ' ':
@@ -63,6 +68,8 @@ func Parse(text string) ([]byte, error) {
 		}
 
 	}
+
+	log.Printf("boldCounter: %d, doubleStrikeCounter: %d", boldCounter, doubleStrikeCounter)
 
 	if boldCounter != 0 {
 		return nil, fmt.Errorf("unmatched bold markers")
