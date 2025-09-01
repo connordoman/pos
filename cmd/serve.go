@@ -89,6 +89,39 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 		w.Write([]byte("Print job queued to device"))
 	})
 
+	r.Post("/cut", func(w http.ResponseWriter, r *http.Request) {
+		// Ensure only one request talks to the device at a time
+		printMu.Lock()
+		defer printMu.Unlock()
+
+		p, err := escpos.InitPrinter()
+		if err != nil {
+			log.Printf("init printer error: %v", err)
+			http.Error(w, "Printer not available", http.StatusServiceUnavailable)
+			return
+		}
+		defer func() {
+			if err := p.Close(); err != nil {
+				log.Printf("printer close error: %v", err)
+			}
+		}()
+
+		if err := p.Init(); err != nil {
+			log.Printf("printer init error: %v", err)
+			http.Error(w, "Failed to initialize printer", http.StatusInternalServerError)
+			return
+		}
+
+		if err := p.Cut(); err != nil {
+			log.Printf("printer cut error: %v", err)
+			http.Error(w, "Failed to cut paper", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusAccepted)
+		w.Write([]byte("Cut command sent to printer"))
+	})
+
 	log.Println("Starting server on :42069")
 
 	return http.ListenAndServe(":42069", r)
