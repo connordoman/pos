@@ -17,12 +17,15 @@ func Parse(text string) ([]byte, error) {
 	for i := 0; i < len(text); i++ {
 		c := text[i]
 
+		nextIndex := min(i+1, len(text)-1)
+		nextNextIndex := min(i+2, len(text)-1)
+
 		switch c {
 		case ' ':
 			bytes = append(bytes, c)
 
-			nextC := text[min(i+1, len(text)-1)]
-			nextNextC := text[min(i+2, len(text)-1)]
+			nextC := text[nextIndex]
+			nextNextC := text[nextNextIndex]
 			if nextC == '*' && nextNextC == '*' {
 				boldCounter++
 				bytes = append(bytes, escape, bold, 1)
@@ -34,16 +37,22 @@ func Parse(text string) ([]byte, error) {
 			}
 
 		case '*':
-			nextC := text[min(i+1, len(text)-1)]
-			nextNextC := text[min(i+2, len(text)-1)]
+			nextC := text[nextIndex]
+			nextNextC := text[nextNextIndex]
+			if nextIndex == nextNextIndex {
+				nextNextC = 0x00
+			}
 			if nextC == '*' && (nextNextC == ' ' || nextNextC == 0x00) {
 				boldCounter--
 				bytes = append(bytes, escape, bold, 0)
 				i += 1
 			}
 		case '_':
-			nextC := text[min(i+1, len(text)-1)]
-			nextNextC := text[min(i+2, len(text)-1)]
+			nextC := text[nextIndex]
+			nextNextC := text[nextNextIndex]
+			if nextIndex == nextNextIndex {
+				nextNextC = 0x00
+			}
 			if nextC == '_' && (nextNextC == ' ' || nextNextC == 0x00) {
 				doubleStrikeCounter--
 				bytes = append(bytes, escape, doubleStrike, 0)
