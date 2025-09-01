@@ -42,19 +42,27 @@ func Parse(text string) ([]byte, error) {
 			}
 
 		case '*':
+			if doubleStrikeCounter == 0 {
+				bytes = append(bytes, c)
+				continue
+			}
+
 			nextC := text[nextIndex]
 			nextNextC := text[nextNextIndex]
 			if nextIndex == nextNextIndex {
 				nextNextC = 0x00
 			}
-
-			fmt.Printf("\nis * nextC: `%c` nextNextC: `%c`\n", nextC, nextNextC)
 			if nextC == '*' && (nextNextC == '\n' || nextNextC == ' ' || nextNextC == 0x00) {
 				boldCounter--
 				bytes = append(bytes, escape, bold, 0)
 				i += 1
 			}
 		case '_':
+			if doubleStrikeCounter == 0 {
+				bytes = append(bytes, c)
+				continue
+			}
+
 			nextC := text[nextIndex]
 			nextNextC := text[nextNextIndex]
 			if nextIndex == nextNextIndex {
