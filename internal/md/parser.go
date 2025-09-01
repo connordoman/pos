@@ -48,7 +48,7 @@ func Parse(text string) ([]byte, error) {
 				nextNextC = 0x00
 			}
 
-			fmt.Printf("is *. nextC: %c, nextNextC: %c\n", nextC, nextNextC)
+			fmt.Printf("is *. nextC: %b, nextNextC: %b\n", nextC, nextNextC)
 			if nextC == '*' && (nextNextC == ' ' || nextNextC == 0x00) {
 				boldCounter--
 				bytes = append(bytes, escape, bold, 0)
