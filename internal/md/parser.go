@@ -37,8 +37,8 @@ func Parse(text string) ([]byte, error) {
 			nextC := text[min(i+1, len(text)-1)]
 			nextNextC := text[min(i+2, len(text)-1)]
 			if nextC == '*' && nextNextC == ' ' {
-				doubleStrikeCounter--
-				bytes = append(bytes, escape, doubleStrike, 0)
+				boldCounter--
+				bytes = append(bytes, escape, bold, 0)
 				i += 1
 			}
 		case '_':
