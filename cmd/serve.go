@@ -88,5 +88,7 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 		w.Write([]byte("Print job queued to device"))
 	})
 
+	log.Println("Starting server on :42069")
+
 	return http.ListenAndServe(":42069", r)
 }
