@@ -24,23 +24,22 @@ func init() {
 func runServeCommand(cmd *cobra.Command, args []string) error {
 	r := chi.NewMux()
 
-	p, err := escpos.InitPrinter()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer func() {
-		if err := p.Close(); err != nil {
-			log.Printf("close error: %v", err)
-		}
-	}()
-
-	p.Init()
-
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
 	})
 
 	r.Post("/print", func(w http.ResponseWriter, r *http.Request) {
+		p, err := escpos.InitPrinter()
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer func() {
+			if err := p.Close(); err != nil {
+				log.Printf("close error: %v", err)
+			}
+		}()
+
+		p.Init()
 		bodyBytes, err := io.ReadAll(r.Body)
 		if err != nil {
 			log.Printf("read error: %v", err)
@@ -54,11 +53,8 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 		w.Write([]byte("Print job received"))
 
 		p.Flush()
+		p.Close()
 	})
-
-	p.Log("Starting server on :42069")
-	p.Cut()
-	p.Flush()
 
 	return http.ListenAndServe(":42069", r)
 }
