@@ -47,6 +47,8 @@ func Parse(text string) ([]byte, error) {
 			if nextIndex == nextNextIndex {
 				nextNextC = 0x00
 			}
+
+			fmt.Printf("is *. nextC: %c, nextNextC: %c\n", nextC, nextNextC)
 			if nextC == '*' && (nextNextC == ' ' || nextNextC == 0x00) {
 				boldCounter--
 				bytes = append(bytes, escape, bold, 0)
