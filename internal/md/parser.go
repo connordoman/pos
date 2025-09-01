@@ -3,19 +3,15 @@ package md
 import (
 	"fmt"
 	"log"
-)
 
-const (
-	escape       = 0x1B
-	bold         = 0x45
-	doubleStrike = 0x47
+	"github.com/connordoman/pos/internal/escpos"
 )
 
 func Parse(text string) ([]byte, error) {
 	bytes := []byte{}
 
 	boldCounter := 0
-	doubleStrikeCounter := 0
+	underlineCounter := 0
 
 	for i := 0; i < len(text); i++ {
 		c := text[i]
@@ -33,11 +29,19 @@ func Parse(text string) ([]byte, error) {
 			nextNextC := text[nextNextIndex]
 			if nextC == '*' && nextNextC == '*' {
 				boldCounter++
-				bytes = append(bytes, escape, bold, 1)
+				bytes = append(bytes,
+					escpos.CharEscape,
+					escpos.CharBold,
+					1,
+				)
 				i += 2
 			} else if nextC == '_' && nextNextC == '_' {
-				doubleStrikeCounter++
-				bytes = append(bytes, escape, doubleStrike, 1)
+				underlineCounter++
+				bytes = append(bytes,
+					escpos.CharEscape,
+					escpos.CharUnderline,
+					1,
+				)
 				i += 2
 			}
 
@@ -54,11 +58,15 @@ func Parse(text string) ([]byte, error) {
 			}
 			if nextC == '*' && (nextNextC == '\n' || nextNextC == ' ' || nextNextC == 0x00) {
 				boldCounter--
-				bytes = append(bytes, escape, bold, 0)
+				bytes = append(bytes,
+					escpos.CharEscape,
+					escpos.CharBold,
+					0,
+				)
 				i += 1
 			}
 		case '_':
-			if doubleStrikeCounter == 0 {
+			if underlineCounter == 0 {
 				bytes = append(bytes, c)
 				continue
 			}
@@ -69,8 +77,12 @@ func Parse(text string) ([]byte, error) {
 				nextNextC = 0x00
 			}
 			if nextC == '_' && (nextNextC == '\n' || nextNextC == ' ' || nextNextC == 0x00) {
-				doubleStrikeCounter--
-				bytes = append(bytes, escape, doubleStrike, 0)
+				underlineCounter--
+				bytes = append(bytes,
+					escpos.CharEscape,
+					escpos.CharUnderline,
+					0,
+				)
 				i += 1
 			}
 		default:
@@ -79,14 +91,14 @@ func Parse(text string) ([]byte, error) {
 
 	}
 
-	log.Printf("boldCounter: %d, doubleStrikeCounter: %d", boldCounter, doubleStrikeCounter)
+	log.Printf("boldCounter: %d, underlineCounter: %d", boldCounter, underlineCounter)
 
 	if boldCounter != 0 {
 		return nil, fmt.Errorf("unmatched bold markers")
 	}
 
-	if doubleStrikeCounter != 0 {
-		return nil, fmt.Errorf("unmatched double strike markers")
+	if underlineCounter != 0 {
+		return nil, fmt.Errorf("unmatched underline markers")
 	}
 
 	return bytes, nil
