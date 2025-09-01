@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -118,8 +119,15 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 			return
 		}
 
+		bytes, err := p.Flush()
+		if err != nil {
+			log.Printf("printer flush error: %v", err)
+			http.Error(w, "Failed to send cut command to printer", http.StatusInternalServerError)
+			return
+		}
+
 		w.WriteHeader(http.StatusAccepted)
-		w.Write([]byte("Cut command sent to printer"))
+		fmt.Fprintf(w, "Cut command sent to printer: %v", bytes)
 	})
 
 	log.Println("Starting server on :42069")
