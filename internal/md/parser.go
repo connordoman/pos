@@ -36,7 +36,7 @@ func Parse(text string) ([]byte, error) {
 		case '*':
 			nextC := text[min(i+1, len(text)-1)]
 			nextNextC := text[min(i+2, len(text)-1)]
-			if nextC == '*' && nextNextC == ' ' {
+			if nextC == '*' && (nextNextC == ' ' || nextNextC == 0x00) {
 				boldCounter--
 				bytes = append(bytes, escape, bold, 0)
 				i += 1
@@ -44,7 +44,7 @@ func Parse(text string) ([]byte, error) {
 		case '_':
 			nextC := text[min(i+1, len(text)-1)]
 			nextNextC := text[min(i+2, len(text)-1)]
-			if nextC == '_' && nextNextC == ' ' {
+			if nextC == '_' && (nextNextC == ' ' || nextNextC == 0x00) {
 				doubleStrikeCounter--
 				bytes = append(bytes, escape, doubleStrike, 0)
 				i += 1
