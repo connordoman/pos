@@ -25,7 +25,7 @@ func (p *Printer) SelectCutModeAndCut(function rune, m, n byte) error {
 	bytes := []byte{0x1D, 0x56}
 	switch function {
 	case 'A':
-		if m != AFullCut && m != AFullCut0 || m != APartialCut && m != APartialCut0 {
+		if m != AFullCut && m != AFullCut0 && m != APartialCut && m != APartialCut0 {
 			return errors.New("invalid cut mode for function A")
 		}
 		bytes = append(bytes, m)
