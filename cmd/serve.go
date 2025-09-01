@@ -4,8 +4,8 @@ import (
 	"io"
 	"log"
 	"net/http"
-    "strings"
-    "sync"
+	"strings"
+	"sync"
 
 	"github.com/connordoman/pos/internal/escpos"
 	"github.com/go-chi/chi"
@@ -76,7 +76,7 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 
 		p.WriteString(text)
 		// Feed a couple lines to push content out of the head area
-		p.Feed(2)
+		p.FeedAndCut(5)
 
 		if _, err := p.Flush(); err != nil {
 			log.Printf("flush error: %v", err)
