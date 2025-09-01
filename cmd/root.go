@@ -36,6 +36,7 @@ func runRootCommand(cmd *cobra.Command, args []string) error {
 	p.Log("Hello, world!")
 	p.Feed(3)
 	p.SimpleLine()
+	p.Cut()
 	p.Flush()
 	return nil
 }
