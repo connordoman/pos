@@ -58,6 +58,8 @@ func Parse(text string) ([]byte, error) {
 				bytes = append(bytes, escape, doubleStrike, 0)
 				i += 1
 			}
+		default:
+			bytes = append(bytes, c)
 		}
 
 	}
