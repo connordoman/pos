@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/connordoman/pos/internal/escpos"
+	"github.com/connordoman/pos/internal/md"
 	"github.com/go-chi/chi"
 	"github.com/spf13/cobra"
 )
@@ -128,6 +129,71 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 
 		w.WriteHeader(http.StatusAccepted)
 		fmt.Fprintf(w, "Cut command sent to printer: %v", bytes)
+	})
+
+	r.Post("/print/markdown", func(w http.ResponseWriter, r *http.Request) {
+		printMu.Lock()
+		defer printMu.Unlock()
+
+		p, err := escpos.InitPrinter()
+		if err != nil {
+			log.Printf("init printer error: %v", err)
+			http.Error(w, "Printer not available", http.StatusServiceUnavailable)
+			return
+		}
+		defer func() {
+			if err := p.Close(); err != nil {
+				log.Printf("printer close error: %v", err)
+			}
+		}()
+
+		if err := p.Init(); err != nil {
+			log.Printf("printer init error: %v", err)
+			http.Error(w, "Failed to initialize printer", http.StatusInternalServerError)
+			return
+		}
+
+		bodyBytes, err := io.ReadAll(r.Body)
+		if err != nil {
+			log.Printf("read body error: %v", err)
+			http.Error(w, "Failed to read request body", http.StatusBadRequest)
+			return
+		}
+
+		text := string(bodyBytes)
+		if len(text) == 0 {
+			http.Error(w, "Empty print job", http.StatusBadRequest)
+			return
+		}
+		// Ensure at least one newline so output becomes visible on paper
+		if !strings.HasSuffix(text, "\n") {
+			text += "\n"
+		}
+
+		markdown, err := md.Parse(text)
+		if err != nil {
+			log.Printf("markdown parse error: %v", err)
+			http.Error(w, "Failed to parse markdown", http.StatusBadRequest)
+			return
+		}
+
+		p.Write(markdown)
+
+		if err := p.FeedAndCut(5); err != nil {
+			log.Printf("printer feed and cut error: %v", err)
+			http.Error(w, "Failed to feed and cut paper", http.StatusInternalServerError)
+			return
+		}
+
+		b, err := p.Flush()
+		if err != nil {
+			log.Printf("printer flush error: %v", err)
+			http.Error(w, "Failed to send data to printer", http.StatusBadGateway)
+			return
+		}
+
+		log.Printf("Sent %d bytes to printer", b)
+
 	})
 
 	log.Println("Starting server on :42069")
