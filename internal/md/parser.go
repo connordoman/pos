@@ -42,7 +42,7 @@ func Parse(text string) ([]byte, error) {
 			}
 
 		case '*':
-			if doubleStrikeCounter == 0 {
+			if boldCounter == 0 {
 				bytes = append(bytes, c)
 				continue
 			}
