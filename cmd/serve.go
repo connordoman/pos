@@ -4,6 +4,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+    "strings"
+    "sync"
 
 	"github.com/connordoman/pos/internal/escpos"
 	"github.com/go-chi/chi"
@@ -21,6 +23,10 @@ func init() {
 
 }
 
+// printMu serializes access to the USB printer to avoid concurrent writes
+// from multiple HTTP requests.
+var printMu sync.Mutex
+
 func runServeCommand(cmd *cobra.Command, args []string) error {
 	r := chi.NewMux()
 
@@ -29,31 +35,57 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 	})
 
 	r.Post("/print", func(w http.ResponseWriter, r *http.Request) {
+		// Ensure only one request talks to the device at a time
+		printMu.Lock()
+		defer printMu.Unlock()
+
 		p, err := escpos.InitPrinter()
 		if err != nil {
-			log.Fatal(err)
+			log.Printf("init printer error: %v", err)
+			http.Error(w, "Printer not available", http.StatusServiceUnavailable)
+			return
 		}
 		defer func() {
 			if err := p.Close(); err != nil {
-				log.Printf("close error: %v", err)
+				log.Printf("printer close error: %v", err)
 			}
 		}()
 
-		p.Init()
+		if err := p.Init(); err != nil {
+			log.Printf("printer init error: %v", err)
+			http.Error(w, "Failed to initialize printer", http.StatusInternalServerError)
+			return
+		}
+
 		bodyBytes, err := io.ReadAll(r.Body)
 		if err != nil {
-			log.Printf("read error: %v", err)
+			log.Printf("read body error: %v", err)
 			http.Error(w, "Failed to read request body", http.StatusBadRequest)
 			return
 		}
 
 		text := string(bodyBytes)
+		if len(text) == 0 {
+			http.Error(w, "Empty print job", http.StatusBadRequest)
+			return
+		}
+		// Ensure at least one newline so output becomes visible on paper
+		if !strings.HasSuffix(text, "\n") {
+			text += "\n"
+		}
+
 		p.WriteString(text)
+		// Feed a couple lines to push content out of the head area
+		p.Feed(2)
 
-		w.Write([]byte("Print job received"))
+		if _, err := p.Flush(); err != nil {
+			log.Printf("flush error: %v", err)
+			http.Error(w, "Failed to send data to printer", http.StatusBadGateway)
+			return
+		}
 
-		p.Flush()
-		p.Close()
+		w.WriteHeader(http.StatusAccepted)
+		w.Write([]byte("Print job queued to device"))
 	})
 
 	return http.ListenAndServe(":42069", r)
