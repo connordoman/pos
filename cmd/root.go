@@ -9,7 +9,9 @@ var RootCommand = &cobra.Command{
 }
 
 func init() {
-
+	RootCommand.AddCommand(
+		ServeCommand,
+	)
 }
 
 func runRootCommand(cmd *cobra.Command, args []string) error {
