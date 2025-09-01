@@ -76,7 +76,7 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 
 		p.WriteString(text)
 		// Feed a couple lines to push content out of the head area
-		p.FeedAndCut(5)
+		p.FeedAndCut(10)
 
 		if _, err := p.Flush(); err != nil {
 			log.Printf("flush error: %v", err)
