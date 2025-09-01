@@ -78,8 +78,7 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 
 		p.WriteString(text)
 		// Feed a couple lines to push content out of the head area
-		// p.FeedAndCut(10)
-		p.WriteString("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n")
+		p.FeedAndCut(10)
 
 		if _, err := p.Flush(); err != nil {
 			log.Printf("flush error: %v", err)
@@ -132,27 +131,6 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 	})
 
 	r.Post("/print/markdown", func(w http.ResponseWriter, r *http.Request) {
-		printMu.Lock()
-		defer printMu.Unlock()
-
-		p, err := escpos.InitPrinter()
-		if err != nil {
-			log.Printf("init printer error: %v", err)
-			http.Error(w, "Printer not available", http.StatusServiceUnavailable)
-			return
-		}
-		defer func() {
-			if err := p.Close(); err != nil {
-				log.Printf("printer close error: %v", err)
-			}
-		}()
-
-		if err := p.Init(); err != nil {
-			log.Printf("printer init error: %v", err)
-			http.Error(w, "Failed to initialize printer", http.StatusInternalServerError)
-			return
-		}
-
 		bodyBytes, err := io.ReadAll(r.Body)
 		if err != nil {
 			log.Printf("read body error: %v", err)
@@ -175,6 +153,27 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 			log.Printf("markdown parse error: %v", err)
 			log.Printf("original message: %s", text)
 			http.Error(w, "Failed to parse markdown", http.StatusBadRequest)
+			return
+		}
+
+		printMu.Lock()
+		defer printMu.Unlock()
+
+		p, err := escpos.InitPrinter()
+		if err != nil {
+			log.Printf("init printer error: %v", err)
+			http.Error(w, "Printer not available", http.StatusServiceUnavailable)
+			return
+		}
+		defer func() {
+			if err := p.Close(); err != nil {
+				log.Printf("printer close error: %v", err)
+			}
+		}()
+
+		if err := p.Init(); err != nil {
+			log.Printf("printer init error: %v", err)
+			http.Error(w, "Failed to initialize printer", http.StatusInternalServerError)
 			return
 		}
 
