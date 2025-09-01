@@ -52,6 +52,8 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 		p.WriteString(text)
 
 		w.Write([]byte("Print job received"))
+
+		p.Flush()
 	})
 
 	return http.ListenAndServe(":42069", r)
