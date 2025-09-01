@@ -192,7 +192,11 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 			return
 		}
 
-		log.Printf("Sent %d bytes to printer", b)
+		msg := fmt.Sprintf("Print job queued to device (%d bytes)", b)
+
+		log.Println(msg)
+
+		w.Write([]byte(msg))
 
 	})
 
