@@ -5,7 +5,7 @@ import (
 	"log"
 )
 
-func ParseMarkdown(text string) ([]byte, error) {
+func (p *Printer) ParseMarkdown(text string) error {
 	bytes := []byte{}
 
 	boldCounter := 0
@@ -27,19 +27,11 @@ func ParseMarkdown(text string) ([]byte, error) {
 			nextNextC := text[nextNextIndex]
 			if nextC == '*' && nextNextC == '*' {
 				boldCounter++
-				bytes = append(bytes,
-					CharEscape,
-					CharBold,
-					1,
-				)
+				p.Emphasize(true)
 				i += 2
 			} else if nextC == '_' && nextNextC == '_' {
 				underlineCounter++
-				bytes = append(bytes,
-					CharEscape,
-					CharUnderline,
-					1,
-				)
+				p.Underline(true)
 				i += 2
 			}
 
@@ -56,16 +48,12 @@ func ParseMarkdown(text string) ([]byte, error) {
 			}
 			if nextC == '*' && (nextNextC == '\n' || nextNextC == ' ' || nextNextC == 0x00) {
 				boldCounter--
-				bytes = append(bytes,
-					CharEscape,
-					CharBold,
-					0,
-				)
+				p.Emphasize(false)
 				i += 1
 			}
 		case '_':
 			if underlineCounter == 0 {
-				bytes = append(bytes, c)
+				p.Write(c)
 				continue
 			}
 
@@ -76,11 +64,7 @@ func ParseMarkdown(text string) ([]byte, error) {
 			}
 			if nextC == '_' && (nextNextC == '\n' || nextNextC == ' ' || nextNextC == 0x00) {
 				underlineCounter--
-				bytes = append(bytes,
-					CharEscape,
-					CharUnderline,
-					0,
-				)
+				p.Underline(false)
 				i += 1
 			}
 		default:
@@ -92,12 +76,14 @@ func ParseMarkdown(text string) ([]byte, error) {
 	log.Printf("boldCounter: %d, underlineCounter: %d", boldCounter, underlineCounter)
 
 	if boldCounter != 0 {
-		return nil, fmt.Errorf("unmatched bold markers")
+		return fmt.Errorf("unmatched bold markers")
 	}
 
 	if underlineCounter != 0 {
-		return nil, fmt.Errorf("unmatched underline markers")
+		return fmt.Errorf("unmatched underline markers")
 	}
 
-	return bytes, nil
+	p.Write(bytes...)
+
+	return nil
 }

@@ -147,14 +147,6 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 			text += "\n"
 		}
 
-		markdown, err := escpos.ParseMarkdown(text)
-		if err != nil {
-			log.Printf("markdown parse error: %v", err)
-			log.Printf("original message: %s", text)
-			http.Error(w, "Failed to parse markdown", http.StatusBadRequest)
-			return
-		}
-
 		printMu.Lock()
 		defer printMu.Unlock()
 
@@ -176,7 +168,11 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 			return
 		}
 
-		p.Write(markdown)
+		if err := p.ParseMarkdown(text); err != nil {
+			log.Printf("printer parse markdown error: %v", err)
+			http.Error(w, "Failed to parse markdown", http.StatusBadRequest)
+			return
+		}
 
 		if err := p.FeedAndCut(5); err != nil {
 			log.Printf("printer feed and cut error: %v", err)

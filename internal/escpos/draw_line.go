@@ -1,6 +1,10 @@
 package escpos
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/scott-ainsworth/go-ascii"
+)
 
 const (
 	ContinuousLineThin  = 1
@@ -42,7 +46,7 @@ func (p *Printer) DrawLinePage(x1, y1, x2, y2 uint16, c, m1, m2 byte) error {
 	}
 
 	// Command header: GS ( Q, length=12 (0x0C,0x00), fn=0x30 (48)
-	bytes := []byte{0x1D, 0x28, 0x51, 0x0C, 0x00, 0x30}
+	bytes := []byte{ascii.GS, '(', 'Q', 0x0C, 0x00, 48}
 
 	// x1, y1, x2, y2 in little‑endian (L then H)
 	bytes = append(bytes,
@@ -53,7 +57,7 @@ func (p *Printer) DrawLinePage(x1, y1, x2, y2 uint16, c, m1, m2 byte) error {
 		c, m1, m2,
 	)
 
-	p.Write(bytes)
+	p.Write(bytes...)
 	return nil
 }
 

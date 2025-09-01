@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/gousb"
+	"github.com/scott-ainsworth/go-ascii"
 )
 
 const (
@@ -105,8 +106,7 @@ func InitPrinter() (*Printer, error) {
 }
 
 func (p *Printer) Init() error {
-	init := []byte{0x1b, 0x40}
-	p.Write(init)
+	p.Write(ascii.ESC, '@')
 	return nil
 }
 
@@ -135,7 +135,7 @@ func (p *Printer) SelectFont(name rune) error {
 		return fmt.Errorf("invalid font name: %c", name)
 	}
 	nameByte := []byte{0x1B, 0x4D, byte(b)}
-	p.Write(nameByte)
+	p.Write(nameByte...)
 	p.fontName = name
 	return nil
 }
@@ -169,7 +169,7 @@ func (p *Printer) SimpleLine() {
 	p.WriteString(line + "\n")
 }
 
-func (p *Printer) Write(data []byte) {
+func (p *Printer) Write(data ...byte) {
 	p.buff = append(p.buff, data...)
 }
 
@@ -232,11 +232,11 @@ func (p *Printer) Close() error {
 }
 
 func (p *Printer) WriteString(s string) {
-	p.Write([]byte(s))
+	p.Write([]byte(s)...)
 }
 
 func (p *Printer) Feed(lines uint8) {
-	p.Write([]byte{0x1B, 0x64, lines})
+	p.Write(ascii.ESC, 'd', lines)
 }
 
 func (p *Printer) TestPrint() {
@@ -249,8 +249,5 @@ func (p *Printer) TestPrint() {
 	// 					 [(3, 51) = "Rolling pattern"],
 	// 					 [64 = "Automatic setting of paper layout"],
 	m := byte(0x01)
-	test := []byte{
-		0x1D, 0x28, 0x41, 0x02, 0x00, n, m,
-	}
-	p.Write(test)
+	p.Write(ascii.GS, '(', 'A', 2, ascii.NUL, n, m)
 }

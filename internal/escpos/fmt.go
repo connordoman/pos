@@ -1,32 +1,27 @@
 package escpos
 
-const (
-	CharEscape       = 0x1B
-	CharBold         = 0x45
-	CharDoubleStrike = 0x47
-	CharUnderline    = 0x2D
-)
+import "github.com/scott-ainsworth/go-ascii"
 
 func (p *Printer) Emphasize(on bool) {
 	if on {
-		p.Write([]byte{CharEscape, CharBold, 1})
+		p.Write(ascii.ESC, 'E', 1)
 	} else {
-		p.Write([]byte{CharEscape, CharBold, 0})
+		p.Write(ascii.ESC, 'E', 0)
 	}
 }
 
 func (p *Printer) DoubleStrike(on bool) {
 	if on {
-		p.Write([]byte{CharEscape, CharDoubleStrike, 1})
+		p.Write(ascii.ESC, 'G', 1)
 	} else {
-		p.Write([]byte{CharEscape, CharDoubleStrike, 0})
+		p.Write(ascii.ESC, 'G', 0)
 	}
 }
 
 func (p *Printer) Underline(on bool) {
 	if on {
-		p.Write([]byte{CharEscape, CharUnderline, 1})
+		p.Write(ascii.ESC, '-', 1)
 	} else {
-		p.Write([]byte{CharEscape, CharUnderline, 0})
+		p.Write(ascii.ESC, '-', 0)
 	}
 }

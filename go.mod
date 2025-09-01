@@ -7,6 +7,8 @@ require (
 	github.com/spf13/cobra v1.9.1
 )
 
+require github.com/scott-ainsworth/go-ascii v0.0.0-20151210013816-e2eb5175fb10 // indirect
+
 require (
 	github.com/go-chi/chi v1.5.5
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect

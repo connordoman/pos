@@ -3,6 +3,8 @@ package escpos
 import (
 	"errors"
 	"log"
+
+	"github.com/scott-ainsworth/go-ascii"
 )
 
 const (
@@ -22,13 +24,14 @@ const (
 )
 
 func (p *Printer) SelectCutModeAndCut(function rune, m, n byte) error {
-	bytes := []byte{0x1D, 0x56}
+	bytes := []byte{ascii.GS, 'V'}
+
 	switch function {
 	case 'A':
 		if m != AFullCut && m != AFullCut0 && m != APartialCut && m != APartialCut0 {
 			return errors.New("invalid cut mode for function A")
 		}
-		bytes = append(bytes, m)
+		bytes = append(bytes, m, 0)
 	case 'B':
 		if m != BFullCut && m != BPartialCut {
 			return errors.New("invalid cut mode for function B")
@@ -50,7 +53,7 @@ func (p *Printer) SelectCutModeAndCut(function rune, m, n byte) error {
 
 	log.Println("Cut command:", bytes)
 
-	p.Write(bytes)
+	p.Write(bytes...)
 
 	return nil
 }
