@@ -64,7 +64,7 @@ func (p *Printer) CutPartial() error {
 }
 
 func (p *Printer) FeedAndCut(lines uint8) error {
-	lines *= 15             // each line is approx 15 turn units
+	lines *= 23             // each line is approx 23 turn units
 	lines = min(lines, 254) // 255 is an overflow
 	return p.SelectCutModeAndCut('B', BFullCut, lines)
 }
