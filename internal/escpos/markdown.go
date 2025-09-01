@@ -1,13 +1,11 @@
-package md
+package escpos
 
 import (
 	"fmt"
 	"log"
-
-	"github.com/connordoman/pos/internal/escpos"
 )
 
-func Parse(text string) ([]byte, error) {
+func ParseMarkdown(text string) ([]byte, error) {
 	bytes := []byte{}
 
 	boldCounter := 0
@@ -30,16 +28,16 @@ func Parse(text string) ([]byte, error) {
 			if nextC == '*' && nextNextC == '*' {
 				boldCounter++
 				bytes = append(bytes,
-					escpos.CharEscape,
-					escpos.CharBold,
+					CharEscape,
+					CharBold,
 					1,
 				)
 				i += 2
 			} else if nextC == '_' && nextNextC == '_' {
 				underlineCounter++
 				bytes = append(bytes,
-					escpos.CharEscape,
-					escpos.CharUnderline,
+					CharEscape,
+					CharUnderline,
 					1,
 				)
 				i += 2
@@ -59,8 +57,8 @@ func Parse(text string) ([]byte, error) {
 			if nextC == '*' && (nextNextC == '\n' || nextNextC == ' ' || nextNextC == 0x00) {
 				boldCounter--
 				bytes = append(bytes,
-					escpos.CharEscape,
-					escpos.CharBold,
+					CharEscape,
+					CharBold,
 					0,
 				)
 				i += 1
@@ -79,8 +77,8 @@ func Parse(text string) ([]byte, error) {
 			if nextC == '_' && (nextNextC == '\n' || nextNextC == ' ' || nextNextC == 0x00) {
 				underlineCounter--
 				bytes = append(bytes,
-					escpos.CharEscape,
-					escpos.CharUnderline,
+					CharEscape,
+					CharUnderline,
 					0,
 				)
 				i += 1

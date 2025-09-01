@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	"github.com/connordoman/pos/internal/escpos"
-	"github.com/connordoman/pos/internal/md"
 	"github.com/go-chi/chi"
 	"github.com/spf13/cobra"
 )
@@ -148,7 +147,7 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 			text += "\n"
 		}
 
-		markdown, err := md.Parse(text)
+		markdown, err := escpos.ParseMarkdown(text)
 		if err != nil {
 			log.Printf("markdown parse error: %v", err)
 			log.Printf("original message: %s", text)
