@@ -56,5 +56,9 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 		p.Flush()
 	})
 
+	p.Log("Starting server on :42069")
+	p.Cut()
+	p.Flush()
+
 	return http.ListenAndServe(":42069", r)
 }
