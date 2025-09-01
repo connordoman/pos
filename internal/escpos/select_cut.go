@@ -56,11 +56,11 @@ func (p *Printer) SelectCutModeAndCut(function rune, m, n byte) error {
 }
 
 func (p *Printer) Cut() error {
-	return p.SelectCutModeAndCut('A', AFullCut0, 0)
+	return p.SelectCutModeAndCut('A', AFullCut, 0)
 }
 
 func (p *Printer) CutPartial() error {
-	return p.SelectCutModeAndCut('A', APartialCut0, 0)
+	return p.SelectCutModeAndCut('A', APartialCut, 0)
 }
 
 func (p *Printer) FeedAndCut(lines uint8) error {
