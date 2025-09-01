@@ -34,11 +34,11 @@ func Parse(text string) ([]byte, error) {
 			if nextC == '*' && nextNextC == '*' {
 				boldCounter++
 				bytes = append(bytes, escape, bold, 1)
-				i += 1
+				i += 2
 			} else if nextC == '_' && nextNextC == '_' {
 				doubleStrikeCounter++
 				bytes = append(bytes, escape, doubleStrike, 1)
-				i += 1
+				i += 2
 			}
 
 		case '*':
@@ -49,7 +49,7 @@ func Parse(text string) ([]byte, error) {
 			}
 
 			fmt.Printf("\nis * nextC: `%c` nextNextC: `%c`\n", nextC, nextNextC)
-			if nextC == '*' && (nextNextC == ' ' || nextNextC == 0x00) {
+			if nextC == '*' && (nextNextC == '\n' || nextNextC == ' ' || nextNextC == 0x00) {
 				boldCounter--
 				bytes = append(bytes, escape, bold, 0)
 				i += 1
@@ -60,7 +60,7 @@ func Parse(text string) ([]byte, error) {
 			if nextIndex == nextNextIndex {
 				nextNextC = 0x00
 			}
-			if nextC == '_' && (nextNextC == ' ' || nextNextC == 0x00) {
+			if nextC == '_' && (nextNextC == '\n' || nextNextC == ' ' || nextNextC == 0x00) {
 				doubleStrikeCounter--
 				bytes = append(bytes, escape, doubleStrike, 0)
 				i += 1
