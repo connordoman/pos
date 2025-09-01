@@ -25,7 +25,7 @@ func (p *Printer) SelectCutModeAndCut(function rune, m, n byte) error {
 	bytes := []byte{0x1D, 0x56}
 	switch function {
 	case 'A':
-		if m != AFullCut && m != AFullCut0 || m != APartialCut && m != APartialCut0 {
+		if m != AFullCut && m != AFullCut0 && m != APartialCut && m != APartialCut0 {
 			return errors.New("invalid cut mode for function A")
 		}
 		bytes = append(bytes, m)
@@ -56,14 +56,15 @@ func (p *Printer) SelectCutModeAndCut(function rune, m, n byte) error {
 }
 
 func (p *Printer) Cut() error {
-	return p.SelectCutModeAndCut('A', AFullCut0, 0)
+	return p.SelectCutModeAndCut('A', AFullCut, 0)
 }
 
 func (p *Printer) CutPartial() error {
-	return p.SelectCutModeAndCut('A', APartialCut0, 0)
+	return p.SelectCutModeAndCut('A', APartialCut, 0)
 }
 
 func (p *Printer) FeedAndCut(lines uint8) error {
+	lines *= 23             // each line is approx 23 turn units
 	lines = min(lines, 254) // 255 is an overflow
 	return p.SelectCutModeAndCut('B', BFullCut, lines)
 }
