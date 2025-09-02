@@ -57,6 +57,25 @@ func (t TokenType) String() string {
 	}
 }
 
+func (t TokenType) HeadingSize() int {
+	switch t {
+	case TokenHeading1:
+		return 1
+	case TokenHeading2:
+		return 2
+	case TokenHeading3:
+		return 3
+	case TokenHeading4:
+		return 4
+	case TokenHeading5:
+		return 5
+	case TokenHeading6:
+		return 6
+	default:
+		return 0
+	}
+}
+
 type Token struct {
 	Type    TokenType
 	Lexeme  string

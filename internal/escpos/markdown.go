@@ -2,88 +2,36 @@ package escpos
 
 import (
 	"fmt"
-	"log"
+	"strings"
+
+	"github.com/connordoman/pos/internal/escpos/md"
 )
 
 func (p *Printer) ParseMarkdown(text string) error {
-	bytes := []byte{}
+	interpreter := md.NewInterpreter()
+	err := interpreter.Run(text)
+	if err != nil {
+		return fmt.Errorf("failed to parse markdown: %w", err)
+	}
 
-	boldCounter := 0
-	underlineCounter := 0
+	for _, token := range interpreter.Tokens {
+		switch token.Type {
+		case md.TokenHeading1, md.TokenHeading2, md.TokenHeading3, md.TokenHeading4, md.TokenHeading5, md.TokenHeading6:
+			mark := strings.Repeat("#", token.Type.HeadingSize())
+			p.Emphasize(true)
+			p.WriteString(fmt.Sprintf("%s %s", mark, token.Lexeme))
+			p.Emphasize(false)
+		case md.TokenBold:
+			p.Emphasize(true)
+			p.WriteString(token.Lexeme)
+			p.Emphasize(false)
+		case md.TokenUnderline:
+			p.Underline(true)
+			p.WriteString(token.Lexeme)
+			p.Underline(false)
 
-	for i := 0; i < len(text); i++ {
-		c := text[i]
-
-		nextIndex := min(i+1, len(text)-1)
-		nextNextIndex := min(i+2, len(text)-1)
-
-		fmt.Printf("%c", c)
-
-		switch c {
-		case ' ':
-			bytes = append(bytes, c)
-
-			nextC := text[nextIndex]
-			nextNextC := text[nextNextIndex]
-			if nextC == '*' && nextNextC == '*' {
-				boldCounter++
-				p.Emphasize(true)
-				i += 2
-			} else if nextC == '_' && nextNextC == '_' {
-				underlineCounter++
-				p.Underline(true)
-				i += 2
-			}
-
-		case '*':
-			if boldCounter == 0 {
-				bytes = append(bytes, c)
-				continue
-			}
-
-			nextC := text[nextIndex]
-			nextNextC := text[nextNextIndex]
-			if nextIndex == nextNextIndex {
-				nextNextC = 0x00
-			}
-			if nextC == '*' && (nextNextC == '\n' || nextNextC == ' ' || nextNextC == 0x00) {
-				boldCounter--
-				p.Emphasize(false)
-				i += 1
-			}
-		case '_':
-			if underlineCounter == 0 {
-				p.Write(c)
-				continue
-			}
-
-			nextC := text[nextIndex]
-			nextNextC := text[nextNextIndex]
-			if nextIndex == nextNextIndex {
-				nextNextC = 0x00
-			}
-			if nextC == '_' && (nextNextC == '\n' || nextNextC == ' ' || nextNextC == 0x00) {
-				underlineCounter--
-				p.Underline(false)
-				i += 1
-			}
-		default:
-			bytes = append(bytes, c)
 		}
-
 	}
-
-	log.Printf("boldCounter: %d, underlineCounter: %d", boldCounter, underlineCounter)
-
-	if boldCounter != 0 {
-		return fmt.Errorf("unmatched bold markers")
-	}
-
-	if underlineCounter != 0 {
-		return fmt.Errorf("unmatched underline markers")
-	}
-
-	p.Write(bytes...)
 
 	return nil
 }
