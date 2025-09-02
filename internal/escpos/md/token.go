@@ -11,7 +11,8 @@ const (
 	TokenCodeBlock
 
 	TokenBold
-	TokenUnderscored
+	TokenItalic
+	TokenUnderline
 
 	TokenHeading1
 	TokenHeading2
@@ -33,8 +34,10 @@ func (t TokenType) String() string {
 		return "CodeBlock"
 	case TokenBold:
 		return "Bold"
-	case TokenUnderscored:
-		return "Underscored"
+	case TokenItalic:
+		return "Italic"
+	case TokenUnderline:
+		return "Underline"
 	case TokenHeading1:
 		return "H1"
 	case TokenHeading2:
@@ -73,7 +76,7 @@ func NewToken(t TokenType, lexeme string, literal any, line int) *Token {
 func (t *Token) String() string {
 	switch t.Literal.(type) {
 	case string:
-		return fmt.Sprintf("%d %s %q", t.Line, t.Type, t.Literal)
+		return fmt.Sprintf("%4d %10s %q", t.Line, t.Type, t.Literal)
 	}
-	return fmt.Sprintf("%d %s %v", t.Line, t.Type, t.Literal)
+	return fmt.Sprintf("%4d %10s %v", t.Line, t.Type, t.Literal)
 }

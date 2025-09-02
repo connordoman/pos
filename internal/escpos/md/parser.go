@@ -1,6 +1,8 @@
 package md
 
-import "log"
+import (
+	"log"
+)
 
 type Parser struct {
 	Source  Source
@@ -48,25 +50,48 @@ func (p *Parser) ScanToken() {
 	newLine := p.line
 
 	if p.isNewLine {
-		for p.Match(' ') && !p.IsAtEnd() {
-			// p.Advance()
+		for p.Peek() == ' ' && !p.IsAtEnd() {
+			p.Advance()
 		}
 
 		// Error(p.line, "Unexpected character.")
 	}
 
 	switch c {
-	// single tokens
 	case '#':
-		log.Println("Found #")
 		if p.isNewLine {
-			log.Println("At start of line, parsing heading")
 			p.Heading()
+			newLine++
+		}
+	// case '`':
+	// 	p.InlineCode()
+	case '*':
+		// If escaped, treat as literal and skip
+		if p.Prev() == '\\' {
+			break
+		}
+		// Determine if this is ** (bold) or *** (bold+italic) or * (italic)
+		if p.Match('*') {
+			// We consumed a second '*', check for triple '***'
+			if p.Match('*') {
+				p.BoldItalicTriple()
+			} else {
+				p.Bold()
+			}
+		} else {
+			p.Italic()
+		}
+	case '_':
+		// If escaped, treat as literal and skip
+		if p.Prev() == '\\' {
+			break
+		}
+		if p.Match('_') {
+			p.Underline()
 		}
 	case '\n':
 		newLine++
 	default:
-		p.Advance()
 	}
 
 	if newLine > p.line {
@@ -121,6 +146,139 @@ func (p *Parser) Heading() {
 	}
 }
 
+// Prev returns the previous rune (or NUL if not available)
+func (p *Parser) Prev() rune {
+	if p.current-2 < 0 {
+		return 0
+	}
+	return p.Source.CharAt(p.current - 2)
+}
+
+// runLenAt counts consecutive occurrences of ch starting at absolute index i
+func (p *Parser) runLenAt(i int, ch rune) int {
+	n := 0
+	for {
+		r := p.Source.CharAt(i + n)
+		if r == ch && r != 0 {
+			n++
+			continue
+		}
+		break
+	}
+	return n
+}
+
+// findClosingRun finds the index of the start of a closing run of `count` delimiters `ch`,
+// honoring simple escapes (\\). Returns the index of the first closing delimiter and ok.
+func (p *Parser) findClosingRun(ch rune, count int) (int, bool) {
+	i := p.current
+	for !p.IsAtEnd() && p.Source.CharAt(i) != 0 {
+		r := p.Source.CharAt(i)
+		if r == '\\' {
+			// Skip escaped next character
+			i += 2
+			continue
+		}
+		if p.runLenAt(i, ch) >= count {
+			return i, true
+		}
+		i++
+	}
+	return 0, false
+}
+
+// parseDelimited assumes the opening delimiter (of given count) has already been consumed.
+// It captures content up to a matching closing delimiter sequence and advances the cursor past it.
+func (p *Parser) parseDelimited(ch rune, count int) (string, bool) {
+	start := p.current
+	end, ok := p.findClosingRun(ch, count)
+	if !ok {
+		return "", false
+	}
+	content := p.SourceAt(start, end)
+	// Move cursor to end
+	for p.current < end {
+		p.Advance()
+	}
+	// Advance current past the closing run
+	for i := 0; i < count; i++ {
+		p.Advance()
+	}
+	return content, true
+}
+
+// BoldItalicTriple handles ***text*** by emitting Italic then Bold tokens over the same content
+func (p *Parser) BoldItalicTriple() {
+	content, ok := p.parseDelimited('*', 3)
+	if !ok {
+		Error(p.line, "Unterminated bold+italic.")
+		return
+	}
+	p.AddToken(TokenItalic, content)
+	p.AddToken(TokenBold, content)
+}
+
+func (p *Parser) Bold() {
+	content, ok := p.parseDelimited('*', 2)
+	if !ok {
+		Error(p.line, "Unterminated bold.")
+		return
+	}
+	p.AddToken(TokenBold, content)
+}
+
+func (p *Parser) Italic() {
+	content, ok := p.parseDelimited('*', 1)
+	if !ok {
+		Error(p.line, "Unterminated italic.")
+		return
+	}
+	p.AddToken(TokenItalic, content)
+}
+
+func (p *Parser) Underline() {
+	// Support nested bold inside underline: __**text**__
+	if p.Peek() == '*' && p.Source.CharAt(p.current+1) == '*' {
+		// consume '**'
+		p.IncrementCursor()
+		p.IncrementCursor()
+		// parse bold content
+		boldStart := p.current
+		endBold, ok := p.findClosingRun('*', 2)
+		if !ok {
+			Error(p.line, "Unterminated bold inside underline.")
+			return
+		}
+		content := p.SourceAt(boldStart, endBold)
+		// move to end of bold
+		for p.current < endBold {
+			p.Advance()
+		}
+		// advance past '**'
+		p.Advance()
+		p.Advance()
+		// require closing '__'
+		if p.Source.CharAt(p.current) == '_' && p.Source.CharAt(p.current+1) == '_' {
+			p.IncrementCursor()
+			p.IncrementCursor()
+			// Emit both tokens with same content
+			p.AddToken(TokenBold, content)
+			p.AddToken(TokenUnderline, content)
+			return
+		}
+		Error(p.line, "Unterminated underline.")
+		return
+	}
+
+	// Plain underline: __text__
+	content, ok := p.parseDelimited('_', 2)
+	if !ok {
+		Error(p.line, "Unterminated underline.")
+		return
+	}
+	p.AddToken(TokenUnderline, content)
+}
+
 func (p *Parser) ConsumeLine() string {
 	// p.Advance()
 	for !p.Match('\n') && !p.IsAtEnd() {
@@ -134,7 +292,7 @@ func (p *Parser) SourceAt(start, end int) string {
 }
 
 func (p *Parser) CurrentLexeme() string {
-	return p.SourceAt(p.start, p.current)
+	return p.SourceAt(p.start, p.current-1)
 }
 
 // func (p *Parser) text() {

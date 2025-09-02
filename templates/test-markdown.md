@@ -19,7 +19,7 @@ Emphasis examples:
 - Strikethrough: ~~struck-through text~~
 - (Non-standard)
   - Underline: __underlined__
-  - Bold Underline: **__bold underline__**
+  - Bold Underline: __**bold underline**__
 
 
 Inline code: Use `inline code` inside a sentence.
