@@ -7,12 +7,7 @@ type TokenType int
 const (
 	TokenEOF TokenType = iota
 
-	TokenInlineCode
 	TokenCodeBlock
-
-	TokenBold
-	TokenItalic
-	TokenUnderline
 
 	TokenHeading1
 	TokenHeading2
@@ -22,22 +17,16 @@ const (
 	TokenHeading6
 
 	TokenSeparator
+
+	TokenParagraph
 )
 
 func (t TokenType) String() string {
 	switch t {
 	case TokenEOF:
 		return "EOF"
-	case TokenInlineCode:
-		return "InlineCode"
 	case TokenCodeBlock:
 		return "CodeBlock"
-	case TokenBold:
-		return "Bold"
-	case TokenItalic:
-		return "Italic"
-	case TokenUnderline:
-		return "Underline"
 	case TokenHeading1:
 		return "H1"
 	case TokenHeading2:

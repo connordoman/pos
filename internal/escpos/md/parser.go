@@ -74,21 +74,21 @@ func (p *Parser) ScanToken() {
 		if p.Match('*') {
 			// We consumed a second '*', check for triple '***'
 			if p.Match('*') {
-				p.BoldItalicTriple()
+				// p.BoldItalicTriple()
 			} else {
-				p.Bold()
+				// p.Bold()
 			}
 		} else {
-			p.Italic()
+			// p.Italic()
 		}
 	case '_':
 		// If escaped, treat as literal and skip
 		if p.Prev() == '\\' {
 			break
 		}
-		if p.Match('_') {
-			p.Underline()
-		}
+		// if p.Match('_') {
+		// 	p.Underline()
+		// }
 	case '\n':
 		newLine++
 	default:
@@ -208,76 +208,76 @@ func (p *Parser) parseDelimited(ch rune, count int) (string, bool) {
 }
 
 // BoldItalicTriple handles ***text*** by emitting Italic then Bold tokens over the same content
-func (p *Parser) BoldItalicTriple() {
-	content, ok := p.parseDelimited('*', 3)
-	if !ok {
-		Error(p.line, "Unterminated bold+italic.")
-		return
-	}
-	p.AddToken(TokenItalic, content)
-	p.AddToken(TokenBold, content)
-}
+// func (p *Parser) BoldItalicTriple() {
+// 	content, ok := p.parseDelimited('*', 3)
+// 	if !ok {
+// 		Error(p.line, "Unterminated bold+italic.")
+// 		return
+// 	}
+// 	p.AddToken(TokenItalic, content)
+// 	p.AddToken(TokenBold, content)
+// }
 
-func (p *Parser) Bold() {
-	content, ok := p.parseDelimited('*', 2)
-	if !ok {
-		Error(p.line, "Unterminated bold.")
-		return
-	}
-	p.AddToken(TokenBold, content)
-}
+// func (p *Parser) Bold() {
+// 	content, ok := p.parseDelimited('*', 2)
+// 	if !ok {
+// 		Error(p.line, "Unterminated bold.")
+// 		return
+// 	}
+// 	p.AddToken(TokenBold, content)
+// }
 
-func (p *Parser) Italic() {
-	content, ok := p.parseDelimited('*', 1)
-	if !ok {
-		Error(p.line, "Unterminated italic.")
-		return
-	}
-	p.AddToken(TokenItalic, content)
-}
+// func (p *Parser) Italic() {
+// 	content, ok := p.parseDelimited('*', 1)
+// 	if !ok {
+// 		Error(p.line, "Unterminated italic.")
+// 		return
+// 	}
+// 	p.AddToken(TokenItalic, content)
+// }
 
-func (p *Parser) Underline() {
-	// Support nested bold inside underline: __**text**__
-	if p.Peek() == '*' && p.Source.CharAt(p.current+1) == '*' {
-		// consume '**'
-		p.IncrementCursor()
-		p.IncrementCursor()
-		// parse bold content
-		boldStart := p.current
-		endBold, ok := p.findClosingRun('*', 2)
-		if !ok {
-			Error(p.line, "Unterminated bold inside underline.")
-			return
-		}
-		content := p.SourceAt(boldStart, endBold)
-		// move to end of bold
-		for p.current < endBold {
-			p.Advance()
-		}
-		// advance past '**'
-		p.Advance()
-		p.Advance()
-		// require closing '__'
-		if p.Source.CharAt(p.current) == '_' && p.Source.CharAt(p.current+1) == '_' {
-			p.IncrementCursor()
-			p.IncrementCursor()
-			// Emit both tokens with same content
-			p.AddToken(TokenBold, content)
-			p.AddToken(TokenUnderline, content)
-			return
-		}
-		Error(p.line, "Unterminated underline.")
-		return
-	}
+// func (p *Parser) Underline() {
+// 	// Support nested bold inside underline: __**text**__
+// 	if p.Peek() == '*' && p.Source.CharAt(p.current+1) == '*' {
+// 		// consume '**'
+// 		p.IncrementCursor()
+// 		p.IncrementCursor()
+// 		// parse bold content
+// 		boldStart := p.current
+// 		endBold, ok := p.findClosingRun('*', 2)
+// 		if !ok {
+// 			Error(p.line, "Unterminated bold inside underline.")
+// 			return
+// 		}
+// 		content := p.SourceAt(boldStart, endBold)
+// 		// move to end of bold
+// 		for p.current < endBold {
+// 			p.Advance()
+// 		}
+// 		// advance past '**'
+// 		p.IncrementCursor()
+// 		p.IncrementCursor()
+// 		// require closing '__'
+// 		if p.Source.CharAt(p.current) == '_' && p.Source.CharAt(p.current+1) == '_' {
+// 			p.IncrementCursor()
+// 			p.IncrementCursor()
+// 			// Emit both tokens with same content
+// 			// p.AddToken(TokenBold, content)
+// 			// p.AddToken(TokenUnderline, content)
+// 			return
+// 		}
+// 		Error(p.line, "Unterminated underline.")
+// 		return
+// 	}
 
-	// Plain underline: __text__
-	content, ok := p.parseDelimited('_', 2)
-	if !ok {
-		Error(p.line, "Unterminated underline.")
-		return
-	}
-	p.AddToken(TokenUnderline, content)
-}
+// 	// Plain underline: __text__
+// 	content, ok := p.parseDelimited('_', 2)
+// 	if !ok {
+// 		Error(p.line, "Unterminated underline.")
+// 		return
+// 	}
+// 	p.AddToken(TokenUnderline, content)
+// }
 
 func (p *Parser) ConsumeLine() string {
 	// p.Advance()
