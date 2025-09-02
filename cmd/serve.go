@@ -52,12 +52,6 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 			}
 		}()
 
-		if err := p.Init(); err != nil {
-			log.Printf("printer init error: %v", err)
-			http.Error(w, "Failed to initialize printer", http.StatusInternalServerError)
-			return
-		}
-
 		bodyBytes, err := io.ReadAll(r.Body)
 		if err != nil {
 			log.Printf("read body error: %v", err)
@@ -105,12 +99,6 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 				log.Printf("printer close error: %v", err)
 			}
 		}()
-
-		if err := p.Init(); err != nil {
-			log.Printf("printer init error: %v", err)
-			http.Error(w, "Failed to initialize printer", http.StatusInternalServerError)
-			return
-		}
 
 		if err := p.Cut(); err != nil {
 			log.Printf("printer cut error: %v", err)
@@ -161,12 +149,6 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 				log.Printf("printer close error: %v", err)
 			}
 		}()
-
-		if err := p.Init(); err != nil {
-			log.Printf("printer init error: %v", err)
-			http.Error(w, "Failed to initialize printer", http.StatusInternalServerError)
-			return
-		}
 
 		if err := p.ParseMarkdown(text); err != nil {
 			log.Printf("printer parse markdown error: %v", err)

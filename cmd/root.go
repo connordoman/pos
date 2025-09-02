@@ -16,6 +16,7 @@ var RootCommand = &cobra.Command{
 func init() {
 	RootCommand.AddCommand(
 		MdCommand,
+		RSSCommand,
 		ServeCommand,
 	)
 }
@@ -31,7 +32,6 @@ func runRootCommand(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	p.Init()
 	p.SimpleLine()
 	p.Feed(3)
 	p.Log("Hello, world!")
