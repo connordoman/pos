@@ -7,61 +7,53 @@ type TokenType int
 const (
 	TokenEOF TokenType = iota
 
+	// Structural
+	TokenNewLine
+	TokenSeparator // horizontal rule
+
+	// Headings (line-level). We’ll emit a HeadingStart(level) and HeadingEnd to allow inline formatting inside
+	TokenHeadingStart // Literal: int level (1..6)
+	TokenHeadingEnd
+
+	// Inline formatting events (hierarchical start/end toggles)
+	TokenBoldStart
+	TokenBoldEnd
+	TokenUnderlineStart
+	TokenUnderlineEnd
+
+	// Inline text
+	TokenText
+
+	// Code constructs (optional; treat as plain text for now if encountered)
 	TokenCodeBlock
-
-	TokenHeading1
-	TokenHeading2
-	TokenHeading3
-	TokenHeading4
-	TokenHeading5
-	TokenHeading6
-
-	TokenSeparator
-
-	TokenParagraph
 )
 
 func (t TokenType) String() string {
 	switch t {
 	case TokenEOF:
 		return "EOF"
-	case TokenCodeBlock:
-		return "CodeBlock"
-	case TokenHeading1:
-		return "H1"
-	case TokenHeading2:
-		return "H2"
-	case TokenHeading3:
-		return "H3"
-	case TokenHeading4:
-		return "H4"
-	case TokenHeading5:
-		return "H5"
-	case TokenHeading6:
-		return "H6"
+	case TokenNewLine:
+		return "NewLine"
 	case TokenSeparator:
 		return "Separator"
+	case TokenHeadingStart:
+		return "HeadingStart"
+	case TokenHeadingEnd:
+		return "HeadingEnd"
+	case TokenBoldStart:
+		return "BoldStart"
+	case TokenBoldEnd:
+		return "BoldEnd"
+	case TokenUnderlineStart:
+		return "UnderlineStart"
+	case TokenUnderlineEnd:
+		return "UnderlineEnd"
+	case TokenText:
+		return "Text"
+	case TokenCodeBlock:
+		return "CodeBlock"
 	default:
 		return "Unknown"
-	}
-}
-
-func (t TokenType) HeadingSize() int {
-	switch t {
-	case TokenHeading1:
-		return 1
-	case TokenHeading2:
-		return 2
-	case TokenHeading3:
-		return 3
-	case TokenHeading4:
-		return 4
-	case TokenHeading5:
-		return 5
-	case TokenHeading6:
-		return 6
-	default:
-		return 0
 	}
 }
 

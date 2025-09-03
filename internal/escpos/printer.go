@@ -173,6 +173,16 @@ func (p *Printer) Write(data ...byte) {
 	p.buff = append(p.buff, data...)
 }
 
+// Buff returns a copy of the current buffered bytes queued for output.
+func (p *Printer) Buff() []byte {
+	if p.buff == nil {
+		return nil
+	}
+	cp := make([]byte, len(p.buff))
+	copy(cp, p.buff)
+	return cp
+}
+
 func (p *Printer) Flush() (int, error) {
 	if p.out == nil {
 		return 0, errors.New("output endpoint not initialized")

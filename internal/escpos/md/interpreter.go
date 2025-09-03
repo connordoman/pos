@@ -2,7 +2,6 @@ package md
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 )
@@ -37,7 +36,7 @@ func Error(line int, message string) {
 }
 
 func Report(line int, where string, message string) {
-	log.Printf("[line %d] Error %s: %s", line, where, message)
+	fmt.Printf("[line %d] Error %s: %s\n", line, where, message)
 	interpreter.hadError = true
 }
 
@@ -47,8 +46,8 @@ func (i *Interpreter) RunFile(path string) error {
 		return err
 	}
 
-	log.Println("Running file:", path)
-	log.Printf("Length: %d bytes", len(data))
+	fmt.Println("Running file:", path)
+	fmt.Printf("Length: %d bytes\n", len(data))
 
 	err = i.Run(string(data))
 	if err != nil {
@@ -82,10 +81,6 @@ func (i *Interpreter) RunPrompt() error {
 func (i *Interpreter) Run(source string) error {
 	i.Parser = NewParser(source)
 	i.Tokens = i.Parser.ScanTokens(source)
-
-	for _, t := range i.Tokens {
-		fmt.Println(t)
-	}
 
 	return nil
 }

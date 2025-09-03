@@ -24,17 +24,10 @@ func NewParser(source string) *Parser {
 }
 
 func (p *Parser) ScanTokens(source string) []*Token {
-	for {
-		if p.IsAtEnd() {
-			log.Println("End of input")
-			break
-		}
-
-		p.start = p.current
-		p.ScanToken()
+	for !p.IsAtEnd() {
+		p.scanLine()
 	}
-
-	p.Tokens = append(p.Tokens, NewToken(TokenEOF, "", nil, p.line))
+	p.AddToken(TokenEOF, nil)
 	return p.Tokens
 }
 
@@ -42,66 +35,65 @@ func (p *Parser) IsAtEnd() bool {
 	return p.current >= p.Source.Length()
 }
 
-func (p *Parser) ScanToken() {
-	c := p.Advance()
+// scanLine parses one logical line, handling headings, hrules, and inline spans.
+func (p *Parser) scanLine() {
+	p.start = p.current
+	// Read the line up to newline or EOF while peeking for patterns
+	// Detect ATX heading starting hashes at beginning of line (allow up to 3 leading spaces)
+	saved := p.current
+	spaces := 0
+	for spaces < 3 && p.Peek() == ' ' {
+		p.Advance()
+		spaces++
+	}
+	if p.Peek() == '#' {
+		level := 0
+		for p.Peek() == '#' && level < 6 {
+			p.Advance()
+			level++
+		}
+		// require space after hashes unless EOL
+		if p.Peek() == ' ' || p.Peek() == '\n' || p.Peek() == 0 {
+			if p.Peek() == ' ' {
+				p.Advance()
+			}
+			// Heading inline content until end of line
+			p.AddToken(TokenHeadingStart, level)
+			p.scanInlineUntilNewline()
+			p.AddToken(TokenHeadingEnd, level)
+			if p.Peek() == '\n' {
+				p.Advance()
+				p.AddToken(TokenNewLine, nil)
+				p.line++
+			}
+			return
+		}
+	}
+	// Not a heading; restore position
+	p.current = saved
 
-	// log.Printf("scanning token: %q", c)
-
-	newLine := p.line
-
-	if p.isNewLine {
-		for p.Peek() == ' ' && !p.IsAtEnd() {
+	// Horizontal rule: a line with 3+ dashes and optional spaces
+	if p.isHRuleAhead() {
+		// Consume the rest of the line
+		for p.Peek() != '\n' && p.Peek() != 0 {
 			p.Advance()
 		}
-
-		// Error(p.line, "Unexpected character.")
+		p.AddToken(TokenSeparator, nil)
+		if p.Peek() == '\n' {
+			p.Advance()
+			p.AddToken(TokenNewLine, nil)
+			p.line++
+		}
+		return
 	}
 
-	switch c {
-	case '#':
-		if p.isNewLine {
-			p.Heading()
-			newLine++
-		}
-	// case '`':
-	// 	p.InlineCode()
-	case '*':
-		// If escaped, treat as literal and skip
-		if p.Prev() == '\\' {
-			break
-		}
-		// Determine if this is ** (bold) or *** (bold+italic) or * (italic)
-		if p.Match('*') {
-			// We consumed a second '*', check for triple '***'
-			if p.Match('*') {
-				// p.BoldItalicTriple()
-			} else {
-				// p.Bold()
-			}
-		} else {
-			// p.Italic()
-		}
-	case '_':
-		// If escaped, treat as literal and skip
-		if p.Prev() == '\\' {
-			break
-		}
-		// if p.Match('_') {
-		// 	p.Underline()
-		// }
-	case '\n':
-		newLine++
-	default:
+	// Normal paragraph/text line: scan inline and emit newline
+	p.scanInlineUntilNewline()
+	if p.Peek() == '\n' {
+		p.Advance()
+		p.AddToken(TokenNewLine, nil)
+		p.line++
 	}
-
-	if newLine > p.line {
-		p.isNewLine = true
-		p.line = newLine
-	} else if p.isNewLine {
-		p.isNewLine = false
-	}
-
-	// log.Printf("c: %q (isNewLine=%t)", c, p.isNewLine)
 }
 
 func (p *Parser) InlineCode() {
@@ -113,37 +105,7 @@ func (p *Parser) CodeBlock() {
 }
 
 func (p *Parser) Heading() {
-	log.Println("Found heading")
-	headingSize := 1
-
-	for p.Match('#') {
-		if headingSize < 6 {
-			headingSize++
-		}
-	}
-
-	for p.Match(' ') {
-	}
-	p.Advance()
-
-	p.start = p.current - 1
-
-	var headingContent string = p.ConsumeLine()
-
-	switch headingSize {
-	case 1:
-		p.AddToken(TokenHeading1, headingContent)
-	case 2:
-		p.AddToken(TokenHeading2, headingContent)
-	case 3:
-		p.AddToken(TokenHeading3, headingContent)
-	case 4:
-		p.AddToken(TokenHeading4, headingContent)
-	case 5:
-		p.AddToken(TokenHeading5, headingContent)
-	case 6:
-		p.AddToken(TokenHeading6, headingContent)
-	}
+	log.Println("Heading() is unused in new parser")
 }
 
 // Prev returns the previous rune (or NUL if not available)
@@ -342,6 +304,152 @@ func (p *Parser) AddNullToken(t TokenType) {
 }
 
 func (p *Parser) AddToken(t TokenType, obj any) {
-	text := p.Source[p.start:p.current]
-	p.Tokens = append(p.Tokens, NewToken(t, text.String(), obj, p.line))
+	// Lexeme here is best-effort; for inline text we’ll override when adding text tokens
+	var lex string
+	if p.current > p.start {
+		lex = p.Source[p.start:p.current].String()
+	}
+	p.Tokens = append(p.Tokens, NewToken(t, lex, obj, p.line))
+}
+
+// Helpers for the new parser
+
+func (p *Parser) isHRuleAhead() bool {
+	// Allow leading spaces
+	i := p.current
+	for p.Source.CharAt(i) == ' ' {
+		i++
+	}
+	// Count dashes
+	dashes := 0
+	for p.Source.CharAt(i) == '-' {
+		dashes++
+		i++
+	}
+	if dashes < 3 {
+		return false
+	}
+	// Only spaces until newline or end
+	for {
+		r := p.Source.CharAt(i)
+		if r == 0 || r == '\n' {
+			return true
+		}
+		if r != ' ' && r != '-' { // Allow extra dashes/spaces
+			return false
+		}
+		i++
+	}
+}
+
+func (p *Parser) scanInlineUntilNewline() {
+	// Emit text and formatting events until newline or EOF
+	var buf []rune
+	flushText := func() {
+		if len(buf) > 0 {
+			s := string(buf)
+			p.Tokens = append(p.Tokens, NewToken(TokenText, s, s, p.line))
+			buf = buf[:0]
+		}
+	}
+	for {
+		r := p.Peek()
+		if r == 0 || r == '\n' {
+			flushText()
+			return
+		}
+		if r == '\\' {
+			// Escape next char literally
+			p.Advance()
+			next := p.Peek()
+			if next == 0 || next == '\n' {
+				buf = append(buf, '\\')
+				continue
+			}
+			p.Advance()
+			buf = append(buf, next)
+			continue
+		}
+		// Bold with **
+		if r == '*' && p.Source.CharAt(p.current+1) == '*' {
+			flushText()
+			// toggle bold
+			p.Advance() // first *
+			p.Advance() // second *
+			// Peek ahead: if we are at a closing (next non-space is not delimiter start?), we cannot easily know; we’ll parse balanced by scanning content until next ** when emitting at consumer. Simpler: emit a BoldStart token and rely on consumer to stack. But we need paired events. Here we choose to treat encountering ** as a toggle; consumer maintains a stack.
+			// To enable pairing, we will check if we are currently inside bold by looking at the last token; however parser shouldn’t track state. We'll instead look ahead for a matching ** before newline; if found, emit start, parse text up to closing, then emit end.
+			// Find closing **
+			if idx, ok := p.findClosingRun('*', 2); ok {
+				// Emit start
+				p.Tokens = append(p.Tokens, NewToken(TokenBoldStart, "**", nil, p.line))
+				// Emit inner as text with further inline handling (allow nested underline). We'll recursively scan by slicing temporarily — but to keep it simple, parse inline within the range manually.
+				// We'll consume until idx, but process underscores escapes inside.
+				for p.current < idx {
+					rr := p.Peek()
+					if rr == '\\' {
+						p.Advance()
+						n2 := p.Peek()
+						if n2 == 0 || n2 == '\n' {
+							buf = append(buf, '\\')
+							continue
+						}
+						p.Advance()
+						buf = append(buf, n2)
+						continue
+					}
+					if rr == '_' { // underline single underscore
+						flushText()
+						p.Advance()
+						// find closing _
+						if cidx, ok2 := p.findClosingRun('_', 1); ok2 && cidx <= idx {
+							p.Tokens = append(p.Tokens, NewToken(TokenUnderlineStart, "_", nil, p.line))
+							// collect text until cidx
+							for p.current < cidx {
+								chr := p.Advance()
+								buf = append(buf, chr)
+							}
+							flushText()
+							// consume closing _
+							p.Advance()
+							p.Tokens = append(p.Tokens, NewToken(TokenUnderlineEnd, "_", nil, p.line))
+							continue
+						}
+						// no closing, treat as literal
+						buf = append(buf, '_')
+						continue
+					}
+					// regular char inside bold segment
+					buf = append(buf, p.Advance())
+				}
+				flushText()
+				// consume closing **
+				p.Advance()
+				p.Advance()
+				p.Tokens = append(p.Tokens, NewToken(TokenBoldEnd, "**", nil, p.line))
+				continue
+			}
+			// No closing **; treat as literal '**'
+			buf = append(buf, '*', '*')
+			continue
+		}
+		if r == '_' { // single underscore underline
+			flushText()
+			p.Advance()
+			if idx, ok := p.findClosingRun('_', 1); ok {
+				p.Tokens = append(p.Tokens, NewToken(TokenUnderlineStart, "_", nil, p.line))
+				for p.current < idx {
+					buf = append(buf, p.Advance())
+				}
+				flushText()
+				p.Advance() // consume closing _
+				p.Tokens = append(p.Tokens, NewToken(TokenUnderlineEnd, "_", nil, p.line))
+				continue
+			}
+			// no closing; literal
+			buf = append(buf, '_')
+			continue
+		}
+		// Regular character: accumulate
+		buf = append(buf, p.Advance())
+	}
 }
