@@ -2,6 +2,7 @@ package escpos
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/connordoman/pos/internal/escpos/md"
 )
@@ -32,6 +33,11 @@ func (p *Printer) ParseMarkdown(text string) error {
 		return fmt.Errorf("failed to parse markdown: %w", err)
 	}
 
+	headingMarks := make(map[int]string, 6)
+	for i := range 6 {
+		headingMarks[i] = strings.Repeat("#", i+1)
+	}
+
 	// Walk tokens and emit ESC/POS
 	bold := false
 	underline := false
@@ -41,10 +47,17 @@ func (p *Printer) ParseMarkdown(text string) error {
 		case md.TokenHeadingStart:
 			// For headings, just enable emphasize; ignore level for now
 			p.Emphasize(true)
+			if lvl, ok := t.Literal.(int); ok {
+				if lvl < 3 {
+					p.Underline(true)
+				}
+				p.WriteString(headingMarks[lvl] + " ")
+			}
 			inHeading = true
 		case md.TokenHeadingEnd:
 			if inHeading {
 				p.Emphasize(false)
+				p.Underline(false)
 				inHeading = false
 			}
 		case md.TokenBoldStart:

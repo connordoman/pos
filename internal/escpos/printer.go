@@ -50,6 +50,8 @@ type Printer struct {
 	fontName rune
 
 	useNought bool
+
+	BeeperOn bool
 }
 
 func InitPrinter() (*Printer, error) {
@@ -62,6 +64,8 @@ func InitPrinter() (*Printer, error) {
 		buff:      make([]byte, 0, 256),
 		fontName:  'A',
 		useNought: false,
+
+		BeeperOn: false,
 	}
 
 	ctx := gousb.NewContext()
@@ -190,6 +194,11 @@ func (p *Printer) Flush() (int, error) {
 	if len(p.buff) == 0 {
 		return 0, nil
 	}
+
+	if p.BeeperOn {
+		p.Beep(10)
+	}
+
 	// Some printers behave differently when many commands are coalesced.
 	// Write in reasonably sized chunks to mimic multiple writes.
 	const chunkSize = 512
@@ -242,6 +251,8 @@ func (p *Printer) Close() error {
 }
 
 func (p *Printer) WriteString(s string) {
+	s = substituteUnicode(s)
+
 	p.Write([]byte(s)...)
 }
 
