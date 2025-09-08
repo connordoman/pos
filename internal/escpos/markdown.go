@@ -2,88 +2,100 @@ package escpos
 
 import (
 	"fmt"
-	"log"
+	"strings"
+
+	"github.com/connordoman/pos/internal/escpos/md"
 )
 
+type ASTNode struct {
+	Type     md.TokenType
+	Literal  string
+	Children []*ASTNode
+}
+
+func NewAST() *ASTNode {
+	root := &ASTNode{
+		Type:     md.TokenEOF,
+		Literal:  "",
+		Children: []*ASTNode{},
+	}
+	return root
+}
+
+func (n *ASTNode) AddChild(child *ASTNode) {
+	n.Children = append(n.Children, child)
+}
+
 func (p *Printer) ParseMarkdown(text string) error {
-	bytes := []byte{}
+	interpreter := md.NewInterpreter()
+	err := interpreter.Run(text)
+	if err != nil {
+		return fmt.Errorf("failed to parse markdown: %w", err)
+	}
 
-	boldCounter := 0
-	underlineCounter := 0
+	headingMarks := make(map[int]string, 6)
+	for i := range 6 {
+		headingMarks[i] = strings.Repeat("#", i+1)
+	}
 
-	for i := 0; i < len(text); i++ {
-		c := text[i]
-
-		nextIndex := min(i+1, len(text)-1)
-		nextNextIndex := min(i+2, len(text)-1)
-
-		fmt.Printf("%c", c)
-
-		switch c {
-		case ' ':
-			bytes = append(bytes, c)
-
-			nextC := text[nextIndex]
-			nextNextC := text[nextNextIndex]
-			if nextC == '*' && nextNextC == '*' {
-				boldCounter++
-				p.Emphasize(true)
-				i += 2
-			} else if nextC == '_' && nextNextC == '_' {
-				underlineCounter++
-				p.Underline(true)
-				i += 2
+	// Walk tokens and emit ESC/POS
+	bold := false
+	underline := false
+	inHeading := false
+	for _, t := range interpreter.Tokens {
+		switch t.Type {
+		case md.TokenHeadingStart:
+			// For headings, just enable emphasize; ignore level for now
+			p.Emphasize(true)
+			if lvl, ok := t.Literal.(int); ok {
+				if lvl < 3 {
+					p.Underline(true)
+				}
+				p.WriteString(headingMarks[lvl] + " ")
 			}
-
-		case '*':
-			if boldCounter == 0 {
-				bytes = append(bytes, c)
-				continue
-			}
-
-			nextC := text[nextIndex]
-			nextNextC := text[nextNextIndex]
-			if nextIndex == nextNextIndex {
-				nextNextC = 0x00
-			}
-			if nextC == '*' && (nextNextC == '\n' || nextNextC == ' ' || nextNextC == 0x00) {
-				boldCounter--
+			inHeading = true
+		case md.TokenHeadingEnd:
+			if inHeading {
 				p.Emphasize(false)
-				i += 1
-			}
-		case '_':
-			if underlineCounter == 0 {
-				p.Write(c)
-				continue
-			}
-
-			nextC := text[nextIndex]
-			nextNextC := text[nextNextIndex]
-			if nextIndex == nextNextIndex {
-				nextNextC = 0x00
-			}
-			if nextC == '_' && (nextNextC == '\n' || nextNextC == ' ' || nextNextC == 0x00) {
-				underlineCounter--
 				p.Underline(false)
-				i += 1
+				inHeading = false
 			}
+		case md.TokenBoldStart:
+			if !bold {
+				p.Emphasize(true)
+				bold = true
+			}
+		case md.TokenBoldEnd:
+			if bold {
+				p.Emphasize(false)
+				bold = false
+			}
+		case md.TokenUnderlineStart:
+			if !underline {
+				p.Underline(true)
+				underline = true
+			}
+		case md.TokenUnderlineEnd:
+			if underline {
+				p.Underline(false)
+				underline = false
+			}
+		case md.TokenText:
+			if s, ok := t.Literal.(string); ok {
+				p.WriteString(s)
+			}
+		case md.TokenNewLine:
+			p.WriteString("\n")
+		case md.TokenSeparator:
+			p.SimpleLine()
+		case md.TokenCodeBlock:
+			// Treat as plain text for now (already included as TokenText in new parser), ignore
+		case md.TokenEOF:
+			// no-op
 		default:
-			bytes = append(bytes, c)
+			// ignore unknowns safely
 		}
-
 	}
-
-	log.Printf("boldCounter: %d, underlineCounter: %d", boldCounter, underlineCounter)
-
-	if boldCounter != 0 {
-		return fmt.Errorf("unmatched bold markers")
-	}
-
-	if underlineCounter != 0 {
-		return fmt.Errorf("unmatched underline markers")
-	}
-
-	p.Write(bytes...)
 
 	return nil
 }

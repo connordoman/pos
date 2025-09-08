@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -137,6 +138,13 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 			return
 		}
 
+		// Parse query parameters
+		queryParams := r.URL.Query()
+		beeperOn := queryParams.Get("beeper") != "" || queryParams.Get("b") != ""
+		if beeperOn {
+			log.Println("Beeper enabled for this print job")
+		}
+
 		text := string(bodyBytes)
 		if len(text) == 0 {
 			http.Error(w, "Empty print job", http.StatusBadRequest)
@@ -161,6 +169,8 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 				log.Printf("printer close error: %v", err)
 			}
 		}()
+
+		p.BeeperOn = beeperOn
 
 		if err := p.Init(); err != nil {
 			log.Printf("printer init error: %v", err)
@@ -193,6 +203,66 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 
 		w.Write([]byte(msg))
 
+	})
+
+	r.Post("/beep", func(w http.ResponseWriter, r *http.Request) {
+		bodyJson, err := io.ReadAll(r.Body)
+		if err != nil {
+			log.Printf("read body error: %v", err)
+			http.Error(w, "Failed to read request body", http.StatusBadRequest)
+			return
+		}
+
+		type BeepRequest struct {
+			Time int `json:"time"`
+		}
+
+		var beepReq BeepRequest
+		if err := json.Unmarshal(bodyJson, &beepReq); err != nil {
+			log.Printf("unmarshal body error: %v", err)
+			http.Error(w, "Failed to parse request body", http.StatusBadRequest)
+			return
+		}
+
+		printMu.Lock()
+		defer printMu.Unlock()
+
+		p, err := escpos.InitPrinter()
+		if err != nil {
+			log.Printf("init printer error: %v", err)
+			http.Error(w, "Printer not available", http.StatusServiceUnavailable)
+			return
+		}
+		defer func() {
+			if err := p.Close(); err != nil {
+				log.Printf("printer close error: %v", err)
+			}
+		}()
+
+		if err := p.Init(); err != nil {
+			log.Printf("printer init error: %v", err)
+			http.Error(w, "Failed to initialize printer", http.StatusInternalServerError)
+			return
+		}
+
+		deciseconds := beepReq.Time / 100
+
+		log.Println("Beep duration (deciseconds):", deciseconds)
+
+		if err := p.Beep(uint8(min(254, max(0, deciseconds)))); err != nil {
+			log.Printf("printer beep error: %v", err)
+			http.Error(w, "Failed to send beep command to printer", http.StatusInternalServerError)
+			return
+		}
+
+		if _, err := p.Flush(); err != nil {
+			log.Printf("flush error: %v", err)
+			http.Error(w, "Failed to send data to printer", http.StatusBadGateway)
+			return
+		}
+
+		w.WriteHeader(http.StatusAccepted)
+		w.Write([]byte("Print job queued to device"))
 	})
 
 	log.Println("Starting server on :42069")
