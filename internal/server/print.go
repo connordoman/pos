@@ -30,7 +30,7 @@ func handlePrint(w http.ResponseWriter, r *http.Request) {
 
 	p.WriteString(text)
 	// Feed a couple lines to push content out of the head area
-	p.FeedAndCut(10)
+	p.FeedAndCut(5)
 
 	if _, err := p.Flush(); err != nil {
 		log.Printf("flush error: %v", err)
