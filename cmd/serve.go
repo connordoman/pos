@@ -3,7 +3,6 @@ package cmd
 import (
 	"log"
 	"strconv"
-	"sync"
 
 	"github.com/connordoman/pos/internal/server"
 	"github.com/spf13/cobra"
@@ -19,10 +18,6 @@ var ServeCommand = &cobra.Command{
 func init() {
 	ServeCommand.Flags().IntP("port", "p", 42069, "The port to listen on")
 }
-
-// printMu serializes access to the USB printer to avoid concurrent writes
-// from multiple HTTP requests.
-var printMu sync.Mutex
 
 func runServeCommand(cmd *cobra.Command, args []string) error {
 	portFlag, err := cmd.Flags().GetInt("port")
