@@ -33,10 +33,10 @@ func NewServer(port string) *Server {
 	r.Get("/health", handleHealth)
 
 	r.With(printerMiddleware).Post("/print", handlePrint)
-
 	r.With(printerMiddleware).Post("/print/markdown", handlePrintMarkdown)
-
 	r.With(printerMiddleware).Post("/cut", handleCut)
+
+	r.Get("/jobs", handleGetJobs)
 
 	return &Server{
 		r:    r,
