@@ -15,7 +15,7 @@ func handleGetJobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobs, count, err := client.From("jobs").Select("*", "exact", false).Execute()
+	jobs, count, err := client.From("print_jobs").Select("*", "exact", false).Execute()
 	if err != nil {
 		log.Printf("error getting jobs: %v", err)
 		http.Error(w, "Failed to get jobs", http.StatusInternalServerError)
