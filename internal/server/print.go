@@ -6,30 +6,10 @@ import (
 	"log"
 	"net/http"
 	"strings"
-
-	"github.com/connordoman/pos/internal/escpos"
 )
 
 func handlePrint(w http.ResponseWriter, r *http.Request) {
-	defer lockPrinter()()
-
-	p, err := escpos.InitPrinter()
-	if err != nil {
-		log.Printf("init printer error: %v", err)
-		http.Error(w, "Printer not available", http.StatusServiceUnavailable)
-		return
-	}
-	defer func() {
-		if err := p.Close(); err != nil {
-			log.Printf("printer close error: %v", err)
-		}
-	}()
-
-	if err := p.Init(); err != nil {
-		log.Printf("printer init error: %v", err)
-		http.Error(w, "Failed to initialize printer", http.StatusInternalServerError)
-		return
-	}
+	p := getPrinter(r)
 
 	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -64,7 +44,7 @@ func handlePrint(w http.ResponseWriter, r *http.Request) {
 }
 
 func handlePrintMarkdown(w http.ResponseWriter, r *http.Request) {
-	defer lockPrinter()()
+	p := getPrinter(r)
 
 	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -81,27 +61,6 @@ func handlePrintMarkdown(w http.ResponseWriter, r *http.Request) {
 	// Ensure at least one newline so output becomes visible on paper
 	if !strings.HasSuffix(text, "\n") {
 		text += "\n"
-	}
-
-	printMu.Lock()
-	defer printMu.Unlock()
-
-	p, err := escpos.InitPrinter()
-	if err != nil {
-		log.Printf("init printer error: %v", err)
-		http.Error(w, "Printer not available", http.StatusServiceUnavailable)
-		return
-	}
-	defer func() {
-		if err := p.Close(); err != nil {
-			log.Printf("printer close error: %v", err)
-		}
-	}()
-
-	if err := p.Init(); err != nil {
-		log.Printf("printer init error: %v", err)
-		http.Error(w, "Failed to initialize printer", http.StatusInternalServerError)
-		return
 	}
 
 	if err := p.ParseMarkdown(text); err != nil {
