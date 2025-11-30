@@ -21,7 +21,7 @@ var ServeCommand = &cobra.Command{
 }
 
 func init() {
-
+	ServeCommand.Flags().String("port", "42069", "The port to listen on")
 }
 
 // printMu serializes access to the USB printer to avoid concurrent writes
@@ -29,6 +29,11 @@ func init() {
 var printMu sync.Mutex
 
 func runServeCommand(cmd *cobra.Command, args []string) error {
+	portFlag, err := cmd.Flags().GetString("port")
+	if err != nil {
+		return err
+	}
+
 	r := chi.NewMux()
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -195,7 +200,7 @@ func runServeCommand(cmd *cobra.Command, args []string) error {
 
 	})
 
-	log.Println("Starting server on :42069")
+	log.Printf("Starting server on :%s", portFlag)
 
-	return http.ListenAndServe(":42069", r)
+	return http.ListenAndServe(fmt.Sprintf(":%s", portFlag), r)
 }
