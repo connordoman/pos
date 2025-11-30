@@ -34,6 +34,8 @@ func NewServer(port string) *Server {
 
 	r.With(printerMiddleware).Post("/print", handlePrint)
 
+	r.With(printerMiddleware).Post("/print/markdown", handlePrintMarkdown)
+
 	r.With(printerMiddleware).Post("/cut", handleCut)
 
 	return &Server{
