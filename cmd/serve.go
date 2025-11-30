@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"log"
+	"strconv"
 	"sync"
 
 	"github.com/connordoman/pos/internal/server"
@@ -24,14 +25,16 @@ func init() {
 var printMu sync.Mutex
 
 func runServeCommand(cmd *cobra.Command, args []string) error {
-	portFlag, err := cmd.Flags().GetString("port")
+	portFlag, err := cmd.Flags().GetInt("port")
 	if err != nil {
 		return err
 	}
 
-	s := server.NewServer(portFlag)
+	port := strconv.Itoa(portFlag)
 
-	log.Printf("Starting server on :%s", portFlag)
+	s := server.NewServer(port)
+
+	log.Printf("Starting server on :%s", port)
 
 	return s.Start()
 }
